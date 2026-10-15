@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import type { CountdownConfig } from './Countdown'
 import { getSessionState } from './timer'
+import { enableCountdownAudio, playCountdownTone, stopCountdownTone } from './countdownAudio'
 
 interface CountdownModalProps {
   countdown: CountdownConfig
@@ -9,6 +10,7 @@ interface CountdownModalProps {
 
 export default function CountdownModal({ countdown, onClose }: CountdownModalProps) {
   const dialogRef = useRef<HTMLDialogElement>(null)
+  const lastToneRef = useRef('')
   const elapsedRef = useRef(0)
   const startedAtRef = useRef(0)
   const [isPaused, setIsPaused] = useState(false)
@@ -38,11 +40,20 @@ export default function CountdownModal({ countdown, onClose }: CountdownModalPro
       const elapsed = Math.min(totalMs, performance.now() - startedAtRef.current)
       elapsedRef.current = elapsed
       setElapsedMs(elapsed)
+      const state = getSessionState(countdown.moveSeconds, countdown.breakSeconds, countdown.reps, elapsed)
+      const toneKey = `${state.rep}:${state.remainingSeconds}`
+      if (state.phase === 'Move' && state.remainingSeconds <= 3 && toneKey !== lastToneRef.current) {
+        lastToneRef.current = toneKey
+        playCountdownTone()
+      }
       if (elapsed < totalMs) frame = requestAnimationFrame(tick)
     }
     frame = requestAnimationFrame(tick)
-    return () => cancelAnimationFrame(frame)
-  }, [totalMs, restartCount, isPaused])
+    return () => {
+      cancelAnimationFrame(frame)
+      stopCountdownTone()
+    }
+  }, [totalMs, countdown.moveSeconds, countdown.breakSeconds, countdown.reps, restartCount, isPaused])
 
   return (
     <dialog
@@ -79,6 +90,7 @@ export default function CountdownModal({ countdown, onClose }: CountdownModalPro
             title={isPaused ? 'Resume countdown' : 'Pause countdown'}
             disabled={completed}
             onClick={() => {
+              if (isPaused) enableCountdownAudio()
               if (!isPaused) {
                 elapsedRef.current = Math.min(totalMs, performance.now() - startedAtRef.current)
                 setElapsedMs(elapsedRef.current)
@@ -96,6 +108,9 @@ export default function CountdownModal({ countdown, onClose }: CountdownModalPro
           aria-label="Restart countdown"
           title="Restart countdown"
           onClick={() => {
+            enableCountdownAudio()
+            stopCountdownTone()
+            lastToneRef.current = ''
             elapsedRef.current = 0
             setElapsedMs(0)
             setIsPaused(false)
