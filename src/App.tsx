@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { FormEvent } from 'react'
 import Countdown from './Countdown'
 import CountdownModal from './CountdownModal'
+import { enableCountdownAudio } from './countdownAudio'
 import { loadCountdowns, saveCountdowns } from './countdownStorage'
 import type { CountdownConfig } from './Countdown'
 
@@ -139,7 +140,7 @@ function App() {
             {countdowns.length === 0 ? 'Create a countdown to see it here.' : `${countdowns.length} ${countdowns.length === 1 ? 'countdown' : 'countdowns'} created.`}
           </p>
           <div className="mt-5 grid gap-5 sm:grid-cols-2">
-            {countdowns.map((countdown) => <Countdown key={countdown.id} {...countdown} onPlay={() => setActiveCountdown(countdown)} />)}
+            {countdowns.map((countdown) => <Countdown key={countdown.id} {...countdown} onPlay={() => { enableCountdownAudio(); setActiveCountdown(countdown) }} />)}
           </div>
         </section>
       </main>
